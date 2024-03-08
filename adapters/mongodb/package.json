@@ -1,0 +1,50 @@
+{
+  "name": "rupa",
+  "description": "( रूप ) — An opinionated 🎽 formatter for commander.js with ✨ colored output.",
+  "version": "0.0.4",
+  "license": "Zlib",
+  "main": "dist/index.js",
+  "type": "module",
+  "homepage": "https://github.com/vsnthdev/rupa#readme",
+  "bugs": "https://github.com/vsnthdev/rupa/issues",
+  "author": {
+    "name": "Vasanth Srivatsa",
+    "email": "hey@vsnth.dev",
+    "url": "https://vsnth.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vsnthdev/rupa.git"
+  },
+  "engines": {
+    "node": ">=17.8.0"
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "clean": "rimraf ./dist",
+    "build": "rimraf ./dist && tsc --incremental false"
+  },
+  "keywords": [
+    "cli",
+    "args",
+    "option",
+    "command",
+    "argument",
+    "terminal",
+    "commander",
+    "command-line"
+  ],
+  "dependencies": {
+    "express": "^4.18.3",
+    "nodemailer": "^6.9.12",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.11.24",
+    "jsonwebtoken": "^9.0.2",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.3.3"
+  }
+}
