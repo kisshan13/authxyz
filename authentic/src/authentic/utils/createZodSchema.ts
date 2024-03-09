@@ -1,15 +1,15 @@
 import { z } from "zod";
-import { PayloadSchema } from "../shared";
+import { PayloadSchema } from "../shared.js";
 
 function createZodSchema(payload: PayloadSchema[]) {
-  const schema = z.object(
-    Object.fromEntries(
-      payload.map((field) => [
-        field.name,
-        field.optional ? z.string().optional() : z.string(),
-      ])
-    )
-  );
+  const fields = {};
+  payload.forEach((field) => {
+    fields[field.name] = field.optional ? z.string().optional() : z.string();
+  });
+  const schema = z.object({
+    ...fields,
+  });
+
   return schema;
 }
 

@@ -11,6 +11,7 @@
     "alwaysStrict": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
-    "preserveConstEnums": true
+    "preserveConstEnums": true,
+    "allowJs": true
   }
 }

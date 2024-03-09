@@ -12,11 +12,11 @@
 
 import type { Request, Response, NextFunction } from "express";
 import type { JwtPayload } from "jsonwebtoken";
-
-import { PayloadSchema } from "./shared";
-
-import createZodSchema from "./utils/createZodSchema";
 import { ZodError } from "zod";
+
+import { PayloadSchema } from "./shared.js";
+
+import createZodSchema from "./utils/createZodSchema.js";
 
 type JwtSecret = string;
 
@@ -33,6 +33,8 @@ interface LocalAuthOptions<T extends string> {
    * @description Roles supported in the application.
    */
   roles?: T[];
+
+  adapter: any;
 }
 
 interface LocalLoginConfig {
@@ -47,22 +49,25 @@ class Local<T extends string> {
   #secret: JwtSecret;
   #jwtOption: JwtPayload | undefined;
   #roles: T[] | undefined;
+  #adapter: any;
 
   constructor({
     secret,
     jwtOption,
     roles = ["user"] as T[],
+    adapter,
   }: LocalAuthOptions<T>) {
     this.#secret = secret;
     this.#jwtOption = jwtOption;
     this.#roles = roles as T[];
+    this.#adapter = adapter;
   }
 
-  async protect(role: T) {
+  protect(role: T) {
     // Implement logic for protecting routes
   }
 
-  async login(path: string, config: LocalLoginConfig) {
+  login(path: string, config: LocalLoginConfig) {
     const validationSchema = createZodSchema([
       { name: "email", optional: false },
       { name: "password", optional: false },
@@ -77,18 +82,25 @@ class Local<T extends string> {
     };
   }
 
-  async register(path: string, config: LocalLoginConfig) {
+  register(path: string, config: LocalLoginConfig) {
     const validationSchema = createZodSchema([
       { name: "email", optional: false },
       { name: "password", optional: false },
-      ...(config?.schema && { ...config.schema }),
     ]);
 
     return async (req: Request, res: Response, next: NextFunction) => {
       if (req.path === path) {
+        console.log(req.path);
         try {
           const payload = validationSchema.parse(req.body);
-        } catch (error) {}
+
+          const user = await this.#adapter?.addUser(payload);
+
+          res.send(user);
+        } catch (error) {
+          res.send("FAileed");
+          console.log(error);
+        }
       } else {
         next();
       }

@@ -1,7 +1,7 @@
 {
   "name": "authentic.js",
   "description": "A robust authentication library for express.js",
-  "version": "1.0.0",
+  "version": "1.0.9",
   "license": "MIT",
   "main": "dist/index.js",
   "type": "module",
