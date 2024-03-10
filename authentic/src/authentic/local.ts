@@ -14,8 +14,7 @@ import type { Request, Response, NextFunction } from "express";
 import type { JwtPayload } from "jsonwebtoken";
 import { ZodError } from "zod";
 
-import { PayloadSchema } from "./shared.js";
-
+import type { DatabaseAdapter, PayloadSchema } from "./shared.js";
 import createZodSchema from "./utils/createZodSchema.js";
 
 type JwtSecret = string;
@@ -34,7 +33,7 @@ interface LocalAuthOptions<T extends string> {
    */
   roles?: T[];
 
-  adapter: any;
+  adapter: DatabaseAdapter;
 }
 
 interface LocalLoginConfig {
@@ -49,7 +48,7 @@ class Local<T extends string> {
   #secret: JwtSecret;
   #jwtOption: JwtPayload | undefined;
   #roles: T[] | undefined;
-  #adapter: any;
+  #adapter: DatabaseAdapter;
 
   constructor({
     secret,
@@ -96,7 +95,12 @@ class Local<T extends string> {
 
           const user = await this.#adapter?.addUser(payload);
 
-          res.send(user);
+          const { status, message, data } = user;
+
+          res.status(status).send({
+            message: message,
+            data: data,
+          });
         } catch (error) {
           res.send("FAileed");
           console.log(error);
