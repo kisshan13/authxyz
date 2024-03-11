@@ -36,7 +36,7 @@ class MongoAdapter<T extends Document> {
     }
   }
 
-  async addUser(user: UserCreate) {
+  async addUser(user: UserCreate | Object) {
     const newUser = new this.#user({ ...user });
 
     await newUser.save();
@@ -46,7 +46,7 @@ class MongoAdapter<T extends Document> {
     return newUser.toJSON();
   }
 
-  async getUser(user: GetUser) {
+  async getUser(user: GetUser | Object) {
     const foundUser = await this.#user.findOne(user);
 
     if (!foundUser) {
