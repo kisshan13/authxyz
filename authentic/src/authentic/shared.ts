@@ -8,5 +8,5 @@ export interface AdapterMethodResult {
 
 export type DatabaseAdapter = {
   addUser: (data: any) => Promise<AdapterMethodResult>;
-  loginUser: (data: any) => Promise<AdapterMethodResult>;
+  getUser: (data: any) => Promise<AdapterMethodResult>;
 };
