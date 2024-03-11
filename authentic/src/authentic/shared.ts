@@ -1,6 +1,6 @@
 export type PayloadSchema = { name: string; optional: boolean };
 
-interface AdapterMethodResult {
+export interface AdapterMethodResult {
   status: number;
   message: string;
   data: any;
