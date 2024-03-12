@@ -12,7 +12,7 @@
 
 import type { Request, Response, NextFunction, CookieOptions } from "express";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
-import { sign, verify } from "jsonwebtoken";
+import { verify } from "jsonwebtoken";
 import { ZodError } from "zod";
 import bcrypt from "bcrypt";
 import moment from "moment";
@@ -93,6 +93,33 @@ class Local<T extends string> {
 
   protect(role: T) {
     // Implement logic for protecting routes
+
+    return async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const token = req.headers["authorization"];
+
+        if (!token) {
+          return res.status(401).send({
+            message: "Unauthorized",
+          });
+        }
+
+        const payload = verify(token, this.#secret);
+
+        if (!payload) {
+          return res.status(401).send({
+            message: "Unauthorized",
+          });
+        }
+
+        if (this.#options?.onLogin) {
+          // this.#options.onLogin(payload, res, next);
+          return;
+        }
+
+        next();
+      } catch (error) {}
+    };
   }
 
   login<T>(path: string, config: LocalLoginConfig<T>) {
@@ -111,8 +138,30 @@ class Local<T extends string> {
 
           const { status, message, data } = user;
 
+          const password = bcrypt.compareSync(
+            payload["password"],
+            data?.password
+          );
+
+          if (!password) {
+            return res.status(401).send({
+              message: "Wrong Credentials",
+            });
+          }
+
+          const authToken = signAuth({
+            method: this.#options.validationMethod,
+            data: { id: data?.id || data?._id },
+            secret: this.#secret,
+            options: {
+              jwtOptions: this.#options?.jwtOptions,
+              cookieOptions: this.#options?.cookieOptions,
+            },
+            res: res,
+          });
+
           if (this.#options?.onLogin) {
-            this.#options.onLogin(user, res, next);
+            this.#options.onLogin({ ...data, token: authToken }, res, next);
             return;
           }
 
@@ -185,6 +234,8 @@ class Local<T extends string> {
   }
 
   onLogin() {}
+
+  onRegister() {}
 
   async mail() {
     // Implement logic for sending emails

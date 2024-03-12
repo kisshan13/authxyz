@@ -1,7 +1,7 @@
-import type { CookieOptions, Response } from "express";
-import type { SignOptions } from "jsonwebtoken";
+import type { CookieOptions, Response, Request } from "express";
+import type { JwtPayload, SignOptions } from "jsonwebtoken";
 
-import { sign } from "jsonwebtoken";
+import { sign, verify } from "jsonwebtoken";
 import moment from "moment";
 
 interface AuthSign {
@@ -13,6 +13,12 @@ interface AuthSign {
     cookieOptions?: CookieOptions;
     jwtOptions?: SignOptions;
   };
+}
+
+interface ValidateMethodOptions {
+  method: "JWT" | "COOKIE";
+  req: Request;
+  secret: string;
 }
 
 const cookieName = "_auth_kqda";
@@ -32,6 +38,23 @@ function signAuth({ method = "JWT", res, data, secret, options }: AuthSign) {
         ...options.cookieOptions,
       }),
     });
+  }
+}
+
+function validateByMethod({
+  method = "JWT",
+  req,
+  secret,
+}: ValidateMethodOptions) {
+  if (method === "JWT") {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    const isValid = verify(token, secret);
+
+    return token;
+  } else {
+    const token = req.signedCookies[cookieName];
+    return token;
   }
 }
 
