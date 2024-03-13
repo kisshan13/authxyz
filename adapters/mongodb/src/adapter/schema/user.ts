@@ -18,6 +18,10 @@ export function registerUserSchema(
       required: true,
     },
 
+    role: {
+      type: String,
+    },
+
     ...(typeof options?.schema === "object" ? { ...options.schema } : {}),
   });
 

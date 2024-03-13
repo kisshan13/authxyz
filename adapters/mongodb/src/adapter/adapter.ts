@@ -1,7 +1,9 @@
 import mongoose, { Model, Document } from "mongoose";
 
-import { SchemaConfig } from "./shared.js";
+import { ErrorHandler, SchemaConfig } from "./shared.js";
 import { registerUserSchema } from "./schema/user.js";
+import { duplicateDocHandler } from "./handler.js";
+import { userInfo } from "os";
 
 interface MongoAdapterConfig {
   database: mongoose.Connection;
@@ -21,9 +23,11 @@ interface GetUser {
 class MongoAdapter<T extends Document> {
   #database: mongoose.Connection;
   #user: Model<T>;
+  handlers: ErrorHandler[];
   constructor({ database }: MongoAdapterConfig) {
     this.#database = database;
     this.#user = null as Model<T>;
+    this.handlers = [duplicateDocHandler];
   }
 
   addUserSchema(model?: Model<T>, options?: { schema: SchemaConfig }) {
@@ -43,17 +47,31 @@ class MongoAdapter<T extends Document> {
 
     delete newUser["password"];
 
-    return newUser.toJSON();
+    return {
+      status: 201,
+      message: "User Details are: ",
+      data: newUser.toJSON(),
+    };
   }
 
   async getUser(user: GetUser | Object) {
-    const foundUser = await this.#user.findOne(user);
+    
+    const userFilter = {
+      ...(user["email"] && { email: user["email"] }),
+      ...(user["id"] && { _id: user["id"] }),
+    };
+
+    const foundUser = await this.#user.findOne(userFilter);
 
     if (!foundUser) {
       return null;
     }
 
-    return foundUser.toJSON();
+    return {
+      status: 200,
+      message: "User Details are: ",
+      data: foundUser.toJSON(),
+    };
   }
 }
 
