@@ -12,23 +12,23 @@
 
 import type { Request, Response, NextFunction, CookieOptions } from "express";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
-import { verify } from "jsonwebtoken";
 import { ZodError } from "zod";
 import bcrypt from "bcrypt";
-import moment from "moment";
 
 import type {
   AdapterMethodResult,
   DatabaseAdapter,
   PayloadSchema,
+  PayloadValidation,
 } from "./shared.js";
 import createZodSchema from "./utils/createZodSchema.js";
-import signAuth from "./authentication.js";
+import { validateByMethod, signAuth } from "./authentication.js";
+import { send } from "process";
 
 type JwtSecret = string;
 
 interface LocalLoginConfig<T> {
-  schema?: PayloadSchema[];
+  schema?: PayloadSchema[] | PayloadValidation;
   role?: T;
 }
 
@@ -96,43 +96,49 @@ class Local<T extends string> {
 
     return async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const token = req.headers["authorization"];
+        const isAuthenticated = validateByMethod({
+          method: this.#options?.validationMethod,
+          req: req,
+          secret: this.#secret,
+        });
 
-        if (!token) {
-          return res.status(401).send({
-            message: "Unauthorized",
+        if (isAuthenticated?.message || !isAuthenticated) {
+          return res.status(403).json({
+            message: isAuthenticated?.message || "Unauthorized",
           });
         }
 
-        const payload = verify(token, this.#secret);
+        const user = await this.#adapter.getUser({ id: isAuthenticated?.id });
 
-        if (!payload) {
-          return res.status(401).send({
-            message: "Unauthorized",
+        if (!user?.data || user?.data?.role !== role) {
+          return res.status(401).json({
+            message: "Missing required permissions",
           });
-        }
-
-        if (this.#options?.onLogin) {
-          // this.#options.onLogin(payload, res, next);
-          return;
         }
 
         next();
-      } catch (error) {}
+      } catch (error) {
+        this.onError(error, res);
+      }
     };
   }
 
   login<T>(path: string, config: LocalLoginConfig<T>) {
-    const validationSchema = createZodSchema([
-      { name: "email", optional: false },
-      { name: "password", optional: false },
-      ...(config?.schema && { ...config.schema }),
-    ]);
+    const validationSchema =
+      typeof config?.schema !== "function" &&
+      createZodSchema([
+        { name: "email", optional: false },
+        { name: "password", optional: false },
+        ...(config?.schema && [...config.schema]),
+      ]);
 
     return async (req: Request, res: Response, next: NextFunction) => {
       if (req.path === path) {
         try {
-          const payload = validationSchema.parse(req.body);
+          const payload =
+            typeof config?.schema === "function"
+              ? config?.schema(req.body)
+              : validationSchema.parse(req.body);
 
           const user = await this.#adapter?.getUser(payload);
 
@@ -181,17 +187,25 @@ class Local<T extends string> {
   }
 
   register<T>(path: string, config: LocalLoginConfig<T>) {
-    const validationSchema = createZodSchema([
-      { name: "email", optional: false },
-      { name: "password", optional: false },
-    ]);
+    const validationSchema =
+      typeof config?.schema !== "function" &&
+      createZodSchema([
+        { name: "email", optional: false },
+        { name: "password", optional: false },
+        ...(config?.schema && [...config.schema]),
+      ]);
 
     return async (req: Request, res: Response, next: NextFunction) => {
       if (req.path === path) {
+        console.log(path);
         try {
-          const payload = validationSchema.parse(req.body);
+          const payload =
+            typeof config?.schema === "function"
+              ? config?.schema(req.body)
+              : validationSchema.parse(req.body);
 
-          const password = bcrypt.hash(
+          console.log(payload);
+          const password = await bcrypt.hash(
             payload["password"],
             bcrypt.genSaltSync()
           );
@@ -199,6 +213,8 @@ class Local<T extends string> {
           const user = await this.#adapter?.addUser({ ...payload, password });
 
           const { status, message, data } = user;
+
+          console.log(user);
 
           const authInfo = signAuth({
             method: this.#options.validationMethod,
@@ -210,6 +226,8 @@ class Local<T extends string> {
             },
             secret: this.#secret,
           });
+
+          console.log(authInfo);
 
           if (this.#options?.onRegister) {
             this.#options.onRegister({ ...data, token: authInfo }, res, next);
@@ -243,7 +261,10 @@ class Local<T extends string> {
 
   private async onError(error: Error, res: Response) {
     if (error instanceof ZodError) {
+      return res.send(error);
     }
+
+    res.send(error);
   }
 }
 

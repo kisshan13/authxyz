@@ -1,7 +1,7 @@
 import type { CookieOptions, Response, Request } from "express";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
 
-import { sign, verify } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import moment from "moment";
 
 interface AuthSign {
@@ -25,7 +25,7 @@ const cookieName = "_auth_kqda";
 
 function signAuth({ method = "JWT", res, data, secret, options }: AuthSign) {
   if (method === "JWT") {
-    const token = sign(data, secret, options.jwtOptions);
+    const token = jwt.sign(data, secret, options.jwtOptions);
     return token;
   } else {
     res.cookie(cookieName, data, {
@@ -49,13 +49,28 @@ function validateByMethod({
   if (method === "JWT") {
     const token = req.headers.authorization?.split(" ")[1];
 
-    const isValid = verify(token, secret);
+    if (!token) {
+      return { message: "Invalid Auth token" };
+    }
 
-    return token;
+    const isValid = jwt.verify(token, secret);
+
+    if (typeof isValid === "object") {
+      return {
+        id: isValid?.id,
+      };
+    }
   } else {
     const token = req.signedCookies[cookieName];
-    return token;
+
+    if (!token) {
+      return { message: "Invalid requests" };
+    }
+
+    return {
+      id: token?.id,
+    };
   }
 }
 
-export default signAuth;
+export { signAuth, validateByMethod };

@@ -150,4 +150,6 @@ dist
 # Support for Project snippet scope
 !.vscode/*.code-snippets
 
+test.js
+test.d.ts
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,node
