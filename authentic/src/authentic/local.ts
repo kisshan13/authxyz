@@ -21,9 +21,10 @@ import type {
   PayloadSchema,
   PayloadValidation,
 } from "./shared.js";
+
 import createZodSchema from "./utils/createZodSchema.js";
 import { validateByMethod, signAuth } from "./authentication.js";
-import { send } from "process";
+import zodError from "./utils/errorHandler.js";
 
 type JwtSecret = string;
 
@@ -166,6 +167,8 @@ class Local<T extends string> {
             res: res,
           });
 
+          delete data["password"];
+
           if (this.#options?.onLogin) {
             this.#options.onLogin({ ...data, token: authToken }, res, next);
             return;
@@ -197,7 +200,6 @@ class Local<T extends string> {
 
     return async (req: Request, res: Response, next: NextFunction) => {
       if (req.path === path) {
-        console.log(path);
         try {
           const payload =
             typeof config?.schema === "function"
@@ -210,11 +212,13 @@ class Local<T extends string> {
             bcrypt.genSaltSync()
           );
 
-          const user = await this.#adapter?.addUser({ ...payload, password });
+          const user = await this.#adapter?.addUser({
+            ...payload,
+            password,
+            ...(config?.role && { role: config?.role }),
+          });
 
           const { status, message, data } = user;
-
-          console.log(user);
 
           const authInfo = signAuth({
             method: this.#options.validationMethod,
@@ -227,7 +231,7 @@ class Local<T extends string> {
             secret: this.#secret,
           });
 
-          console.log(authInfo);
+          delete data["password"];
 
           if (this.#options?.onRegister) {
             this.#options.onRegister({ ...data, token: authInfo }, res, next);
@@ -260,11 +264,29 @@ class Local<T extends string> {
   }
 
   private async onError(error: Error, res: Response) {
+    let response = null as { message: string; status: number };
+    console.log(error);
     if (error instanceof ZodError) {
-      return res.send(error);
+      response = zodError(error);
+
+      return res.status(response?.status).send({
+        message: response?.message,
+      });
     }
 
-    res.send(error);
+    for (let i = 0; i < this.#adapter.handlers.length; i++) {
+      const handler = this.#adapter.handlers[i];
+      response = handler(error);
+      console.log(response);
+      if (response) {
+        break;
+      }
+    }
+
+    res.status(500).json({
+      message: error.message,
+      stack: error.stack?.toString(),
+    });
   }
 }
 
