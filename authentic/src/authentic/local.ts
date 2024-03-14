@@ -13,7 +13,15 @@
 import type { Request, Response, NextFunction, CookieOptions } from "express";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
 import { ZodError } from "zod";
+
+import nodemailer, {
+  SendMailOptions,
+  Transport,
+  TransportOptions,
+} from "nodemailer";
 import bcrypt from "bcrypt";
+import ejs from "ejs";
+import Nodecache from "node-cache";
 
 import type {
   AdapterMethodResult,
@@ -25,12 +33,26 @@ import type {
 import createZodSchema from "./utils/createZodSchema.js";
 import { validateByMethod, signAuth } from "./authentication.js";
 import zodError from "./utils/errorHandler.js";
+import Mail from "./utils/mail.js";
+
+import SMTPTransport from "nodemailer/lib/smtp-transport/index.js";
 
 type JwtSecret = string;
 
-interface LocalLoginConfig<T> {
+interface LocalLoginConfig<T extends string> {
   schema?: PayloadSchema[] | PayloadValidation;
   role?: T;
+  mailTemplate?: string;
+}
+
+interface MailOptions {
+  mailConfig?: SMTPTransport;
+  templates?: {
+    register: () => string;
+    resend: () => string;
+    forgetPassword: () => string;
+  };
+  mail?: string;
 }
 
 interface RegisterConfig {
@@ -41,6 +63,7 @@ interface AuthOptions {
   validationMethod: "JWT" | "COOKIE";
   cookieOptions?: CookieOptions;
   jwtOptions?: SignOptions;
+  verification?: boolean;
   onError?: (err: Error, res: Response) => void;
   onLogin?: (
     adapterResult: AdapterMethodResult,
@@ -71,6 +94,8 @@ interface LocalAuthOptions<T extends string> {
   adapter: DatabaseAdapter;
 
   options?: AuthOptions;
+
+  mailOptions: MailOptions
 }
 
 class Local<T extends string> {
@@ -78,10 +103,11 @@ class Local<T extends string> {
   #roles: T[] | undefined;
   #adapter: DatabaseAdapter;
   #options: AuthOptions;
-
+  #mail: MailOptions;
+  #mailVerificationCode: Nodecache;
   constructor({
     secret,
-    jwtOption,
+    mailOptions,
     roles = ["user"] as T[],
     adapter,
     options,
@@ -90,11 +116,17 @@ class Local<T extends string> {
     this.#roles = roles as T[];
     this.#adapter = adapter;
     this.#options = options;
+    this.#mail = {} as MailOptions;
+    this.#mailVerificationCode = new Nodecache({
+      stdTTL: 60 * 5 * 1000,
+    });
   }
 
-  protect(role: T) {
-    // Implement logic for protecting routes
+  configMail(options: MailOptions) {
+    this.#mail = options;
+  }
 
+  protect(role: T[]) {
     return async (req: Request, res: Response, next: NextFunction) => {
       try {
         const isAuthenticated = validateByMethod({
@@ -111,7 +143,7 @@ class Local<T extends string> {
 
         const user = await this.#adapter.getUser({ id: isAuthenticated?.id });
 
-        if (!user?.data || user?.data?.role !== role) {
+        if (!user?.data || role.includes(user?.data?.role)) {
           return res.status(401).json({
             message: "Missing required permissions",
           });
@@ -124,7 +156,7 @@ class Local<T extends string> {
     };
   }
 
-  login<T>(path: string, config: LocalLoginConfig<T>) {
+  login(path: string, config: LocalLoginConfig<T>) {
     const validationSchema =
       typeof config?.schema !== "function" &&
       createZodSchema([
@@ -189,7 +221,7 @@ class Local<T extends string> {
     };
   }
 
-  register<T>(path: string, config: LocalLoginConfig<T>) {
+  register(path: string, config: LocalLoginConfig<T>) {
     const validationSchema =
       typeof config?.schema !== "function" &&
       createZodSchema([
@@ -206,7 +238,6 @@ class Local<T extends string> {
               ? config?.schema(req.body)
               : validationSchema.parse(req.body);
 
-          console.log(payload);
           const password = await bcrypt.hash(
             payload["password"],
             bcrypt.genSaltSync()
@@ -242,6 +273,21 @@ class Local<T extends string> {
             message: message,
             data: { ...data, token: authInfo },
           });
+
+          if (this.#options.verification) {
+            const verification = Math.ceil(Math.random() * 1000000);
+            this.#mailVerificationCode.set(data?._id || data?.id, verification);
+            const template = await Promise.resolve(
+              this.#mail?.templates?.register()
+            );
+
+            this.sendMail({
+              from: this.#mail?.mail,
+              to: data?.email,
+              html: ejs.render(template, { verificationCode: verification }),
+              subject: "Please verify your email",
+            });
+          }
         } catch (error) {
           if (this.#options?.onError) {
             this.#options.onError(error, res);
@@ -255,17 +301,25 @@ class Local<T extends string> {
     };
   }
 
-  onLogin() {}
-
-  onRegister() {}
-
-  async mail() {
-    // Implement logic for sending emails
+  resendVerification(path: string) {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      if (req.path === path) {
+        try {
+        } catch (error) {
+          if (this.#options?.onError) {
+            this.#options.onError(error, res);
+          } else {
+            this.onError(error, res);
+          }
+        }
+      } else {
+        next();
+      }
+    };
   }
 
   private async onError(error: Error, res: Response) {
     let response = null as { message: string; status: number };
-    console.log(error);
     if (error instanceof ZodError) {
       response = zodError(error);
 
@@ -283,10 +337,15 @@ class Local<T extends string> {
       }
     }
 
-    res.status(500).json({
-      message: error.message,
-      stack: error.stack?.toString(),
+    res.status(response?.status || 500).json({
+      message: response?.message,
     });
+  }
+
+  private async sendMail(options: SendMailOptions) {
+    const mail = new Mail(this.#mail.mailConfig);
+
+    return await mail.sendMail(options);
   }
 }
 
