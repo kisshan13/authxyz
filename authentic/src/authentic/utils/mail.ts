@@ -4,7 +4,7 @@ import SMTPTransport from "nodemailer/lib/smtp-transport";
 
 export default class Mail {
   transporter: nodemailer.Transporter<SMTPTransport.SentMessageInfo>;
-  constructor(transport: SMTPTransport) {
+  constructor(transport: SMTPTransport.Options) {
     this.transporter = nodemailer.createTransport(transport);
   }
 
@@ -12,4 +12,3 @@ export default class Mail {
     return this.transporter.sendMail(mailOptions);
   }
 }
-

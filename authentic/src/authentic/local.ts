@@ -46,7 +46,7 @@ interface LocalLoginConfig<T extends string> {
 }
 
 interface MailOptions {
-  mailConfig?: SMTPTransport;
+  mailConfig?: SMTPTransport.Options;
   templates?: {
     register: () => string;
     resend: () => string;
@@ -95,7 +95,7 @@ interface LocalAuthOptions<T extends string> {
 
   options?: AuthOptions;
 
-  mailOptions: MailOptions
+  mailOptions: MailOptions;
 }
 
 class Local<T extends string> {
@@ -276,7 +276,10 @@ class Local<T extends string> {
 
           if (this.#options.verification) {
             const verification = Math.ceil(Math.random() * 1000000);
-            this.#mailVerificationCode.set(data?._id || data?.id, verification);
+            this.#mailVerificationCode.set(
+              data?._id?.toString() || data?.id,
+              verification
+            );
             const template = await Promise.resolve(
               this.#mail?.templates?.register()
             );
@@ -289,6 +292,7 @@ class Local<T extends string> {
             });
           }
         } catch (error) {
+          console.log(error);
           if (this.#options?.onError) {
             this.#options.onError(error, res);
           } else {

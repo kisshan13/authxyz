@@ -152,4 +152,5 @@ dist
 
 test.js
 test.d.ts
+*.ejs
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,node
