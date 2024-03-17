@@ -9,3 +9,13 @@ export const User = z.object({
 export const verificationSchema = z.object({
   code: z.number(),
 });
+
+export const forgetPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const passwordChangeSchema = z.object({
+    email: z.string().email(),
+    password: z.string(),
+    code: z.number()
+})

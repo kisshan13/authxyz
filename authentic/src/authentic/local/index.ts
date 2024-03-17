@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import { Request, type CookieOptions, type Response } from "express";
 import { SignOptions } from "jsonwebtoken";
-import { ZodError } from "zod";
+import { ErrorMapCtx, ZodError } from "zod";
 import ejs from "ejs";
 
 import SMTPTransport from "nodemailer/lib/smtp-transport";
@@ -22,7 +22,11 @@ import zodError from "../utils/errorHandler.js";
 import NodeCache from "node-cache";
 import { SendMailOptions } from "nodemailer";
 import Mail from "../utils/mail.js";
-import { verificationSchema } from "./schema.js";
+import {
+  forgetPasswordSchema,
+  passwordChangeSchema,
+  verificationSchema,
+} from "./schema.js";
 
 interface MailOptions {
   mailConfig?: SMTPTransport.Options;
@@ -102,8 +106,65 @@ class LocalAuth<T extends string> {
     };
   }
 
-  resetPassword(): LocalMiddlewareRegister {
-    return async (req, res, next) => {};
+  resetPasswordRequest(path: string): LocalMiddlewareRegister {
+    return async (req, res, next) => {
+      const { email } = forgetPasswordSchema.parse(req.body);
+
+      if (this.#resetCode.get(email)) {
+        return res.status(400).json({ message: "Can't reset password." });
+      }
+
+      const verificationToken = Math.ceil(Math.random() * 1000000);
+
+      this.#resetCode.set(email, verificationToken);
+
+      const template = this.#mail.templates.forgetPassword();
+
+      this.sendMail({
+        from: this.#mail.mail,
+        to: email,
+        subject: "Reset your password",
+        html: ejs.render(template, { verificationCode: verificationToken }),
+      });
+
+      res.status(200).json({ message: "Reset code sent to your mail." });
+    };
+  }
+
+  resetPassword(
+    path: string,
+    callback: PostprocessRequest<{ email: string }>
+  ): LocalMiddlewareRegister {
+    const isCallbackFunction = typeof callback === "function";
+
+    const handleWrongCode = (req: Request, res: Response) => {
+      isCallbackFunction
+        ? callback({ type: "INVALID-CODE" }, req, res)
+        : res.status(400).json({ message: "Invalid Code" });
+    };
+
+    return async (req, res, next) => {
+      const { code, email, password } = passwordChangeSchema.parse(req.body);
+
+      if (this.#resetCode.get(email) !== code) {
+        return handleWrongCode(req, res);
+      }
+      const user = await this.#adapter.getUser({ email });
+      const updatedUser = await this.#adapter.updateUser({
+        id: user.data["_id"],
+        update: { password: bcrypt.hashSync(password, bcrypt.genSaltSync(10)) },
+      });
+
+      this.#resetCode.del(email);
+
+      isCallbackFunction
+        ? callback(
+            { type: "PASSWORD-CHANGE", data: { email: email } },
+            req,
+            res
+          )
+        : res.status(200).json({ message: "Password Changed." });
+    };
   }
 
   register(
