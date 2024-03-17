@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PayloadSchema } from "../shared.js";
+import { PayloadSchema } from "../types.js";
 
 function createZodSchema(payload: PayloadSchema[]) {
   const fields = {};

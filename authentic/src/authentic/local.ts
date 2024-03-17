@@ -12,7 +12,7 @@
 
 import type { Request, Response, NextFunction, CookieOptions } from "express";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 
 import nodemailer, {
   SendMailOptions,
@@ -28,7 +28,7 @@ import type {
   DatabaseAdapter,
   PayloadSchema,
   PayloadValidation,
-} from "./shared.js";
+} from "./types.js";
 
 import createZodSchema from "./utils/createZodSchema.js";
 import { validateByMethod, signAuth } from "./authentication.js";
@@ -305,7 +305,68 @@ class Local<T extends string> {
     };
   }
 
-  resendVerification(path: string) {
+  verify(path: string) {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      const validationSchema = z.object({
+        code: z.number(),
+      });
+
+      if (req.path === path) {
+        try {
+          const { code } = validationSchema.parse(req.body);
+
+          const isAuthenticated = validateByMethod({
+            method: this.#options?.validationMethod,
+            req: req,
+            secret: this.#secret,
+          });
+
+          if (isAuthenticated?.message || !isAuthenticated) {
+            return res.status(403).json({
+              message: isAuthenticated?.message || "Unauthorized",
+            });
+          }
+
+          const user = await this.#adapter.getUser({ id: isAuthenticated?.id });
+
+          if (user?.data?.isVerified) {
+            return res.status(400).json({
+              message: "User is already verified",
+            });
+          }
+
+          const serverCode = this.#mailVerificationCode.get(
+            isAuthenticated?.id
+          );
+
+          if (serverCode !== code) {
+            return res.status(400).json({
+              message: "Invalid verification code",
+            });
+          }
+
+          const updatedUser = await this.#adapter?.updateUser({
+            id: isAuthenticated?.id,
+            isVerified: true,
+          });
+
+          if (updatedUser?.status === 200) {
+            return res.status(200).json({
+              message: "User verified successfully",
+            });
+          }
+
+          res.status(500).json({
+            message: "Internal Server Error",
+          });
+        } catch (error) {}
+      }
+    };
+  }
+
+  resendVerification(path: string, roles?: T[]) {
+    const protectRoute = this.protect(roles);
+
     return async (req: Request, res: Response, next: NextFunction) => {
       if (req.path === path) {
         try {
