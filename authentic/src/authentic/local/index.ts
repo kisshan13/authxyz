@@ -22,6 +22,7 @@ import zodError from "../utils/errorHandler.js";
 import NodeCache from "node-cache";
 import { SendMailOptions } from "nodemailer";
 import Mail from "../utils/mail.js";
+import { verificationSchema } from "./schema.js";
 
 interface MailOptions {
   mailConfig?: SMTPTransport.Options;
@@ -65,6 +66,7 @@ class LocalAuth<T extends string> {
   #options: AuthOptions;
   #mail: MailOptions;
   #verificationCodes: NodeCache;
+  #resetCode: NodeCache;
   constructor({
     roles,
     adapter,
@@ -79,6 +81,7 @@ class LocalAuth<T extends string> {
     this.#validationMethod = validationMethod;
     this.#secret = secret;
     this.#verificationCodes = new NodeCache({ stdTTL: 60 * 5 * 1000 });
+    this.#resetCode = new NodeCache({ stdTTL: 60 * 5 * 1000 });
     this.#options = options;
   }
 
@@ -99,6 +102,10 @@ class LocalAuth<T extends string> {
     };
   }
 
+  resetPassword(): LocalMiddlewareRegister {
+    return async (req, res, next) => {};
+  }
+
   register(
     config: RegisterAuthConfig<T>,
     callback?: PostprocessRequest<{ token: string }>
@@ -112,65 +119,69 @@ class LocalAuth<T extends string> {
     const isCallbackFunction = typeof callback === "function";
 
     return async (req, res, next) => {
-      try {
-        const body = config.body(req.body);
+      if (req.path === config.path && req.method === "POST") {
+        try {
+          const body = config.body(req.body);
 
-        const password = bcrypt.hashSync(
-          body["password"],
-          bcrypt.genSaltSync(10)
-        );
+          const password = bcrypt.hashSync(
+            body["password"],
+            bcrypt.genSaltSync(10)
+          );
 
-        const user = await this.#adapter.addUser({
-          ...body,
-          password,
-          role: config?.role,
-        });
-
-        const { data, status, message } = user;
-
-        const id = data["id"]?.toString() || data["_id"]?.toString();
-
-        const token = signAuth({
-          method: this.#validationMethod,
-          data: { id },
-          secret: this.#secret,
-          res: res,
-          options: {
-            cookieOptions: this.#options?.cookieOptions,
-            jwtOptions: this.#options?.jwtOptions,
-          },
-        });
-
-        if (this.#options?.verification) {
-          console.log("here");
-          const verificationCode = Math.ceil(Math.random() * 1000000);
-
-          this.#verificationCodes.set(id, verificationCode);
-
-          const template = ejs.render(this.#mail.templates.register(), {
-            verificationCode: verificationCode,
+          const user = await this.#adapter.addUser({
+            ...body,
+            password,
+            role: config?.role,
           });
 
-          this.sendMail({
-            from: this.#mail.mail,
-            to: data["email"],
-            subject: "Verify your email",
-            html: template,
+          const { data, status, message } = user;
+
+          const id = data["id"]?.toString() || data["_id"]?.toString();
+
+          const token = signAuth({
+            method: this.#validationMethod,
+            data: { id },
+            secret: this.#secret,
+            res: res,
+            options: {
+              cookieOptions: this.#options?.cookieOptions,
+              jwtOptions: this.#options?.jwtOptions,
+            },
           });
+
+          if (this.#options?.verification) {
+            console.log("here");
+            const verificationCode = Math.ceil(Math.random() * 1000000);
+
+            this.#verificationCodes.set(id, verificationCode);
+
+            const template = ejs.render(this.#mail.templates.register(), {
+              verificationCode: verificationCode,
+            });
+
+            this.sendMail({
+              from: this.#mail.mail,
+              to: data["email"],
+              subject: "Verify your email",
+              html: template,
+            });
+          }
+
+          return isCallbackFunction
+            ? callback(
+                { type: "TOKEN", data: { token }, message: "User Auth Token" },
+                req,
+                res
+              )
+            : res
+                .status(200)
+                .json({ message: "User Auth Token", data: { token } });
+        } catch (error) {
+          console.log(error);
+          this.onError(error, res);
         }
-
-        return isCallbackFunction
-          ? callback(
-              { type: "TOKEN", data: { token }, message: "User Auth Token" },
-              req,
-              res
-            )
-          : res
-              .status(200)
-              .json({ message: "User Auth Token", data: { token } });
-      } catch (error) {
-        console.log(error);
-        this.onError(error, res);
+      } else {
+        next();
       }
     };
   }
@@ -180,81 +191,136 @@ class LocalAuth<T extends string> {
     callback?: PostprocessRequest<{ token: string }>
   ): CoreMiddleware {
     return async (req, res, next) => {
-      try {
-        const body = config.body(req.body);
+      if (req.path === config.path && req.method === "POST") {
+        try {
+          const body = config.body(req.body);
 
-        const user = await this.#adapter.getUser(body);
+          const user = await this.#adapter.getUser(body);
 
-        const { data, status, message } = user;
+          const { data, status, message } = user;
 
-        const isCallback = typeof callback === "function";
+          const isCallback = typeof callback === "function";
 
-        if (status !== 200) {
+          if (status !== 200) {
+            return isCallback
+              ? callback(
+                  {
+                    type: "USER-NOT-FOUND",
+                    data: { token: "" },
+                    message: "No such user exists",
+                  },
+                  req,
+                  res
+                )
+              : res.status(400).json({ message: "Invalid credentials" });
+          }
+
+          const isPasswordMatched = bcrypt.compareSync(
+            body["password"],
+            data["password"]
+          );
+
+          if (!isPasswordMatched) {
+            return isCallback
+              ? callback(
+                  {
+                    type: "WRONG-PASSWORD",
+                    data: { token: "" },
+                    message: "Invalid password",
+                  },
+                  req,
+                  res
+                )
+              : res.status(400).json({ message: "Invalid credentials" });
+          }
+
+          const token = signAuth({
+            method: this.#validationMethod,
+            data: { id: data["id"] || data["_id"] },
+            secret: this.#secret,
+            res: res,
+            options: {
+              cookieOptions: this.#options?.cookieOptions,
+              jwtOptions: this.#options?.jwtOptions,
+            },
+          });
+
           return isCallback
             ? callback(
-                {
-                  type: "USER-NOT-FOUND",
-                  data: { token: "" },
-                  message: "No such user exists",
-                },
+                { type: "TOKEN", data: { token }, message: "User Auth Token" },
                 req,
                 res
               )
-            : res.status(400).json({ message: "Invalid credentials" });
+            : res
+                .status(200)
+                .json({ message: "User Auth Token", data: { token } });
+        } catch (error) {
+          this.onError(error, res);
         }
-
-        const isPasswordMatched = bcrypt.compareSync(
-          body["password"],
-          data["password"]
-        );
-
-        if (!isPasswordMatched) {
-          return isCallback
-            ? callback(
-                {
-                  type: "WRONG-PASSWORD",
-                  data: { token: "" },
-                  message: "Invalid password",
-                },
-                req,
-                res
-              )
-            : res.status(400).json({ message: "Invalid credentials" });
-        }
-
-        const token = signAuth({
-          method: this.#validationMethod,
-          data: { id: data["id"] || data["_id"] },
-          secret: this.#secret,
-          res: res,
-          options: {
-            cookieOptions: this.#options?.cookieOptions,
-            jwtOptions: this.#options?.jwtOptions,
-          },
-        });
-
-        return isCallback
-          ? callback(
-              { type: "TOKEN", data: { token }, message: "User Auth Token" },
-              req,
-              res
-            )
-          : res
-              .status(200)
-              .json({ message: "User Auth Token", data: { token } });
-      } catch (error) {
-        this.onError(error, res);
+      } else {
+        next();
       }
     };
   }
 
-  verify(config: LoginAuthConfig<T>, callback?: PostprocessRequest<null>) {
+  verify(
+    config: LoginAuthConfig<T>,
+    callback?: PostprocessRequest<{}>
+  ): LocalMiddlewareRegister {
     const useAuthenticated = middlewareValidateAuthorization({
       method: this.#validationMethod,
       secret: this.#secret,
     });
 
-    
+    const isCallback = typeof callback === "function";
+
+    const handleNoUserFound = (req: Request, res: Response) => {
+      isCallback
+        ? callback({ type: "USER-NOT-FOUND" }, req, res)
+        : res.status(400).json({ message: "No such user exists" });
+    };
+
+    const handleUserVerified = (req: Request, res: Response) => {
+      isCallback
+        ? callback({ type: "USER-VERIFIED" }, req, res)
+        : res.status(200).json({ message: "User successfully verified" });
+    };
+
+    return async (req, res, next) => {
+      if (req.path === config.path && req.method === "POST") {
+        const payload = verificationSchema.parse(req.body);
+        const isAuthenticated = await useAuthenticated(req, res);
+
+        const { status, data } = await this.#adapter.getUser({
+          id: isAuthenticated.data.id,
+        });
+
+        if (status !== 200) {
+          return handleNoUserFound(req, res);
+        }
+
+        const serverVerificationCode = this.#verificationCodes.get(
+          isAuthenticated.data.id
+        );
+
+        if (serverVerificationCode !== payload.code) {
+          return isCallback
+            ? callback({ type: "INVALID-VERIFICATION" }, req, res)
+            : res.status(400).json({ message: "Invalid verification code" });
+        }
+
+        this.#verificationCodes.del(isAuthenticated.data.id);
+
+        const updateUser = await this.#adapter.updateUser({
+          id: isAuthenticated.data.id,
+          update: { isVerified: true },
+        });
+
+        return handleUserVerified(req, res);
+      } else {
+        next();
+      }
+    };
   }
 
   resendVerification(
@@ -346,7 +412,6 @@ class LocalAuth<T extends string> {
   }
 
   private async sendMail(options: SendMailOptions) {
-    console.log("Here");
     const mail = new Mail(this.#mail.mailConfig);
 
     const here = await mail.sendMail(options);

@@ -25,7 +25,8 @@ export type PostProcessType =
   | "WRONG-PASSWORD"
   | "TOKEN"
   | "VERIFICATION-SENT"
-  | "USER-VERIFIED";
+  | "USER-VERIFIED"
+  | "INVALID-VERIFICATION";
 
 export type CoreMiddleware = LocalMiddlewareRegister;
 
@@ -44,7 +45,10 @@ export interface AdapterMethodResult {
 export type DatabaseAdapter = {
   addUser: (data: any) => Promise<AdapterMethodResult>;
   getUser: (data: any) => Promise<AdapterMethodResult>;
-  updateUser: (data: any) => Promise<AdapterMethodResult>;
+  updateUser: (data: {
+    id: string;
+    update: Object;
+  }) => Promise<AdapterMethodResult>;
 
   handlers: ErrorHandler[];
 };
