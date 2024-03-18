@@ -1,12 +1,12 @@
 {
-  "name": "mongo-adapter",
-  "description": "A robust authentication library for express.js",
+  "name": "@authxyz/adapter-mongodb",
+  "description": "Authxyz official adapater for mongodb database, built using Mongoose ORM",
   "version": "1.0.0",
   "license": "MIT",
   "main": "dist/index.js",
   "type": "module",
-  "homepage": "http://github.com/kisshan13/authentic.js#readme",
-  "bugs": "http://github.com/kisshan13/authentic.js/issues",
+  "homepage": "http://github.com/kisshan13/authxyz#readme",
+  "bugs": "http://github.com/kisshan13/authxyz/issues",
   "author": {
     "name": "Kishan Sharma",
     "email": "kisshan07@outlook.com",
@@ -25,14 +25,11 @@
     "build": "rimraf ./dist && tsc --incremental false"
   },
   "keywords": [
-    "cli",
-    "args",
-    "option",
-    "command",
-    "argument",
-    "terminal",
-    "commander",
-    "command-line"
+    "mongo-adapater",
+    "mongoose",
+    "mongodb",
+    "database",
+    "adapter"
   ],
   "dependencies": {
     "mongoose": "^8.2.1"
