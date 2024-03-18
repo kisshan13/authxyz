@@ -1,13 +1,8 @@
-
-![Logo](https://media.discordapp.net/attachments/812901654801678376/1217363571584012308/authentic.png?ex=6603c12c&is=65f14c2c&hm=09a6612c729fefffe250afaf84daaae1b3c805c21eeaee04083b35f159f94a24&=&format=webp&quality=lossless)
-
+![Logo](https://cdn.discordapp.com/attachments/1183600181405564992/1219303629320880228/authx.png?ex=660acffe&is=65f85afe&hm=c09e633add49af5ae509236f6ac695ca4a4b0ed96e0108bbe589b8f4cb0a7653&)
 
 #
 
-Authentic.js an authentication library for express.js which supports local authentication as well as third party authentication with RBAC built-in .  [See Documentation](https://authenticjs.com)
-
-
-
+Authentic.js an authentication library for express.js which supports local authentication as well as third party authentication with RBAC built-in . [See Documentation](https://authenticjs.com)
 
 ## Features
 
@@ -15,8 +10,3 @@ Authentic.js an authentication library for express.js which supports local authe
 - Google Login
 - Discord Login
 - Role Based Access Control (RBAC)
-
-
-
-
-

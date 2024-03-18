@@ -1,7 +1,7 @@
 {
-  "name": "authentic.js",
+  "name": "authx.js",
   "description": "A robust authentication library for express.js",
-  "version": "1.0.12",
+  "version": "1.0.0",
   "license": "MIT",
   "main": "dist/index.js",
   "type": "module",
@@ -25,14 +25,14 @@
     "build": "rimraf ./dist && tsc --incremental false"
   },
   "keywords": [
-    "cli",
-    "args",
-    "option",
-    "command",
-    "argument",
-    "terminal",
-    "commander",
-    "command-line"
+    "expressjs",
+    "authentication",
+    "jwt-authentication",
+    "cookies",
+    "sessions",
+    "third-party-auth",
+    "authjs",
+    "authorization"
   ],
   "dependencies": {
     "bcrypt": "^5.1.1",
