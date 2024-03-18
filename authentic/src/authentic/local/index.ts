@@ -17,7 +17,7 @@ import {
   middlewareValidateAuthorization,
 } from "./middlewares.js";
 
-import { signAuth } from "../authentication.js";
+import { signAuth } from "../shared/auth.js";
 import zodError from "../utils/errorHandler.js";
 import NodeCache from "node-cache";
 import { SendMailOptions } from "nodemailer";
@@ -258,7 +258,11 @@ class LocalAuth<T extends string> {
 
           return isCallbackFunction
             ? callback(
-                { type: "TOKEN", data: { token }, message: "User Auth Token" },
+                {
+                  type: "TOKEN",
+                  data: { token: token || "" },
+                  message: "User Auth Token",
+                },
                 req,
                 res
               )
@@ -339,7 +343,11 @@ class LocalAuth<T extends string> {
 
           return isCallback
             ? callback(
-                { type: "TOKEN", data: { token }, message: "User Auth Token" },
+                {
+                  type: "TOKEN",
+                  data: { token: token || "" },
+                  message: "User Auth Token",
+                },
                 req,
                 res
               )

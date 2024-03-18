@@ -17,6 +17,17 @@ interface AuthCookieSign {
   options?: CookieOptions;
 }
 
+interface AuthSign {
+  method: "JWT" | "COOKIE";
+  secret?: string;
+  data: any;
+  res: Response;
+  options: {
+    cookieOptions?: CookieOptions;
+    jwtOptions?: SignOptions;
+  };
+}
+
 function signJwtAuth({ data, options, secret }: AuthJWTSign) {
   return jwt.sign(data, secret, options);
 }
@@ -34,4 +45,12 @@ function signCookieAuth(res: Response, { data, options }: AuthCookieSign) {
   });
 }
 
-export { signCookieAuth, signJwtAuth };
+function signAuth({ method = "JWT", res, data, secret, options }: AuthSign) {
+  if (method === "JWT") {
+    return signJwtAuth({ data, options: options.jwtOptions, secret });
+  } else {
+    return signCookieAuth(res, { data, options: options.cookieOptions });
+  }
+}
+
+export { signCookieAuth, signJwtAuth, signAuth };
