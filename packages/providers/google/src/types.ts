@@ -1,11 +1,24 @@
 import type { NextFunction, Request, Response } from "express";
 
-export type PostProcessType = "ALREADY-USER" | "NEW-USER" | "INVALID-CODE";
+export type PostProcessType =
+  | "ALREADY-USER"
+  | "NEW-USER"
+  | "INVALID-CODE"
+  | "AUTH-URL";
 
-export interface LoginAuthConfig<T extends string> {
+export interface AuthConfig<T> {
   path: string;
   role: T;
-  //   scope:
+}
+
+export interface AuthUrl {
+  url: string;
+  state: string;
+}
+
+export interface AuthUrlConfig<T> extends AuthConfig<T> {
+  scope?: string;
+  redirect?: boolean;
 }
 
 export type Body<T extends Object> = {
@@ -26,4 +39,4 @@ export type LocalMiddlewareRegister = (
   next: NextFunction
 ) => Promise<any> | any;
 
-export type GoogleScopes = "email" | "openid" | "profile"
+export type GoogleScopes = "email" | "openid" | "profile";
