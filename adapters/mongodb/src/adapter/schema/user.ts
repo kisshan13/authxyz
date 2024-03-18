@@ -22,6 +22,11 @@ export function registerUserSchema(
       type: String,
     },
 
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
     ...(typeof options?.schema === "object" ? { ...options.schema } : {}),
   });
 

@@ -20,6 +20,11 @@ interface GetUser {
   id?: string;
 }
 
+interface UpdateUser {
+  id: string;
+  update: Object;
+}
+
 class MongoAdapter<T extends Document> {
   #database: mongoose.Connection;
   #user: Model<T>;
@@ -55,7 +60,6 @@ class MongoAdapter<T extends Document> {
   }
 
   async getUser(user: GetUser | Object) {
-    
     const userFilter = {
       ...(user["email"] && { email: user["email"] }),
       ...(user["id"] && { _id: user["id"] }),
@@ -71,6 +75,22 @@ class MongoAdapter<T extends Document> {
       status: 200,
       message: "User Details are: ",
       data: foundUser.toJSON(),
+    };
+  }
+
+  async updateUser(user: UpdateUser) {
+    const updatedUser = await this.#user
+      .findByIdAndUpdate(user.id, user.update)
+      .lean();
+
+    if (!updatedUser) {
+      return null;
+    }
+
+    return {
+      status: 200,
+      message: "User Details are: ",
+      data: updatedUser,
     };
   }
 }
