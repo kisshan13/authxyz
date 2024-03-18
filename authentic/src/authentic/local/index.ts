@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import { Request, type CookieOptions, type Response } from "express";
 import { SignOptions } from "jsonwebtoken";
-import { ErrorMapCtx, ZodError } from "zod";
+import { ZodError } from "zod";
 import ejs from "ejs";
 
 import SMTPTransport from "nodemailer/lib/smtp-transport";
@@ -27,6 +27,7 @@ import {
   passwordChangeSchema,
   verificationSchema,
 } from "./schema.js";
+import { loginSchema, registerSchema } from "../shared/schema.js";
 
 interface MailOptions {
   mailConfig?: SMTPTransport.Options;
@@ -106,7 +107,12 @@ class LocalAuth<T extends string> {
     };
   }
 
-  resetPasswordRequest(path: string): LocalMiddlewareRegister {
+  resetPasswordRequest(
+    path: string,
+    callback: PostprocessRequest<{ email: string; code: number }>
+  ): LocalMiddlewareRegister {
+    const isCallbackFunction = typeof callback === "function";
+
     return async (req, res, next) => {
       if (req.path === path && req.method === "POST") {
         const { email } = forgetPasswordSchema.parse(req.body);
@@ -128,7 +134,16 @@ class LocalAuth<T extends string> {
           html: ejs.render(template, { verificationCode: verificationToken }),
         });
 
-        res.status(200).json({ message: "Reset code sent to your mail." });
+        return isCallbackFunction
+          ? callback(
+              {
+                type: "CODE-SENT",
+                data: { email: email, code: verificationToken },
+              },
+              req,
+              res
+            )
+          : res.status(200).json({ message: "Reset code sent to your mail." });
       } else {
         next();
       }
@@ -192,7 +207,10 @@ class LocalAuth<T extends string> {
     return async (req, res, next) => {
       if (req.path === config.path && req.method === "POST") {
         try {
-          const body = config.body(req.body);
+          const body =
+            typeof config?.body === "function"
+              ? config.body(req.body)
+              : registerSchema.parse(req.body);
 
           const password = bcrypt.hashSync(
             body["password"],
@@ -205,7 +223,7 @@ class LocalAuth<T extends string> {
             role: config?.role,
           });
 
-          const { data, status, message } = user;
+          const { data } = user;
 
           const id = data["id"]?.toString() || data["_id"]?.toString();
 
@@ -264,7 +282,10 @@ class LocalAuth<T extends string> {
     return async (req, res, next) => {
       if (req.path === config.path && req.method === "POST") {
         try {
-          const body = config.body(req.body);
+          const body =
+            typeof config?.body === "function"
+              ? config.body(req.body)
+              : loginSchema.parse(req.body);
 
           const user = await this.#adapter.getUser(body);
 

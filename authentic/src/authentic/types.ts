@@ -28,7 +28,8 @@ export type PostProcessType =
   | "USER-VERIFIED"
   | "INVALID-VERIFICATION"
   | "INVALID-CODE"
-  | "PASSWORD-CHANGE";
+  | "PASSWORD-CHANGE"
+  | "CODE-SENT";
 
 export type CoreMiddleware = LocalMiddlewareRegister;
 
