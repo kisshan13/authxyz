@@ -108,26 +108,30 @@ class LocalAuth<T extends string> {
 
   resetPasswordRequest(path: string): LocalMiddlewareRegister {
     return async (req, res, next) => {
-      const { email } = forgetPasswordSchema.parse(req.body);
+      if (req.path === path && req.method === "POST") {
+        const { email } = forgetPasswordSchema.parse(req.body);
 
-      if (this.#resetCode.get(email)) {
-        return res.status(400).json({ message: "Can't reset password." });
+        if (this.#resetCode.get(email)) {
+          return res.status(400).json({ message: "Can't reset password." });
+        }
+
+        const verificationToken = Math.ceil(Math.random() * 1000000);
+
+        this.#resetCode.set(email, verificationToken);
+
+        const template = this.#mail.templates.forgetPassword();
+
+        this.sendMail({
+          from: this.#mail.mail,
+          to: email,
+          subject: "Reset your password",
+          html: ejs.render(template, { verificationCode: verificationToken }),
+        });
+
+        res.status(200).json({ message: "Reset code sent to your mail." });
+      } else {
+        next();
       }
-
-      const verificationToken = Math.ceil(Math.random() * 1000000);
-
-      this.#resetCode.set(email, verificationToken);
-
-      const template = this.#mail.templates.forgetPassword();
-
-      this.sendMail({
-        from: this.#mail.mail,
-        to: email,
-        subject: "Reset your password",
-        html: ejs.render(template, { verificationCode: verificationToken }),
-      });
-
-      res.status(200).json({ message: "Reset code sent to your mail." });
     };
   }
 
@@ -144,26 +148,32 @@ class LocalAuth<T extends string> {
     };
 
     return async (req, res, next) => {
-      const { code, email, password } = passwordChangeSchema.parse(req.body);
+      if (req.path === path && req.method === "PATCH") {
+        const { code, email, password } = passwordChangeSchema.parse(req.body);
 
-      if (this.#resetCode.get(email) !== code) {
-        return handleWrongCode(req, res);
+        if (this.#resetCode.get(email) !== code) {
+          return handleWrongCode(req, res);
+        }
+        const user = await this.#adapter.getUser({ email });
+        const updatedUser = await this.#adapter.updateUser({
+          id: user.data["_id"],
+          update: {
+            password: bcrypt.hashSync(password, bcrypt.genSaltSync(10)),
+          },
+        });
+
+        this.#resetCode.del(email);
+
+        isCallbackFunction
+          ? callback(
+              { type: "PASSWORD-CHANGE", data: { email: email } },
+              req,
+              res
+            )
+          : res.status(200).json({ message: "Password Changed." });
+      } else {
+        next();
       }
-      const user = await this.#adapter.getUser({ email });
-      const updatedUser = await this.#adapter.updateUser({
-        id: user.data["_id"],
-        update: { password: bcrypt.hashSync(password, bcrypt.genSaltSync(10)) },
-      });
-
-      this.#resetCode.del(email);
-
-      isCallbackFunction
-        ? callback(
-            { type: "PASSWORD-CHANGE", data: { email: email } },
-            req,
-            res
-          )
-        : res.status(200).json({ message: "Password Changed." });
     };
   }
 

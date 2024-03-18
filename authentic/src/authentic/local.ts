@@ -347,7 +347,7 @@ class Local<T extends string> {
 
           const updatedUser = await this.#adapter?.updateUser({
             id: isAuthenticated?.id,
-            isVerified: true,
+            update: { isVerified: true },
           });
 
           if (updatedUser?.status === 200) {
@@ -365,8 +365,6 @@ class Local<T extends string> {
   }
 
   resendVerification(path: string, roles?: T[]) {
-    const protectRoute = this.protect(roles);
-
     return async (req: Request, res: Response, next: NextFunction) => {
       if (req.path === path) {
         try {
