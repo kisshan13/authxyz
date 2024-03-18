@@ -18,7 +18,7 @@ import {
 } from "./middlewares.js";
 
 import { signAuth } from "../shared/auth.js";
-import zodError from "../utils/errorHandler.js";
+import { jwtError, zodError } from "../utils/errorHandler.js";
 import NodeCache from "node-cache";
 import { SendMailOptions } from "nodemailer";
 import Mail from "../utils/mail.js";
@@ -72,6 +72,10 @@ class LocalAuth<T extends string> {
   #mail: MailOptions;
   #verificationCodes: NodeCache;
   #resetCode: NodeCache;
+  #errorHandlerPlugins: ((error: Error) => {
+    message: string;
+    status: number;
+  })[];
   constructor({
     roles,
     adapter,
@@ -88,6 +92,7 @@ class LocalAuth<T extends string> {
     this.#verificationCodes = new NodeCache({ stdTTL: 60 * 5 * 1000 });
     this.#resetCode = new NodeCache({ stdTTL: 60 * 5 * 1000 });
     this.#options = options;
+    this.#errorHandlerPlugins = [zodError, jwtError, ...this.#adapter.handlers];
   }
 
   protect(roles: T[]): LocalMiddlewareRegister {
@@ -521,18 +526,10 @@ class LocalAuth<T extends string> {
 
   private async onError(error: Error, res: Response) {
     let response = null as { message: string; status: number };
-    if (error instanceof ZodError) {
-      response = zodError(error);
 
-      return res.status(response?.status).send({
-        message: response?.message,
-      });
-    }
-
-    for (let i = 0; i < this.#adapter.handlers.length; i++) {
-      const handler = this.#adapter.handlers[i];
+    for (let i = 0; i < this.#errorHandlerPlugins.length; i++) {
+      const handler = this.#errorHandlerPlugins[i];
       response = handler(error);
-      console.log(response);
       if (response) {
         break;
       }

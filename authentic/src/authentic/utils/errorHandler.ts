@@ -1,6 +1,7 @@
+import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { ZodError } from "zod";
 
-export default function zodError(error: Error) {
+export function zodError(error: Error) {
   if (error instanceof ZodError) {
     const message = JSON.parse(error.message);
     const errorMessages = message.map((errorMsg) => {
@@ -11,5 +12,13 @@ export default function zodError(error: Error) {
     });
 
     return { message: errorMessages, status: 422 };
+  }
+}
+
+export function jwtError(error: Error) {
+  if (error instanceof JsonWebTokenError) {
+    return { message: "Invalid auth token", status: 401 };
+  } else if (error instanceof TokenExpiredError) {
+    return { message: "Token expired", status: 401 };
   }
 }
