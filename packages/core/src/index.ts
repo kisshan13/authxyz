@@ -6,13 +6,14 @@ import {
 } from "./middleware.js";
 import { errorFormatter, jwtError } from "./errors.js";
 
-export default {
-  signAuth,
-  signCookieAuth,
-  signJwtAuth,
-  middlewareProtect,
-  middlewareValidateAuthorization,
-  useProtect,
-  errorFormatter,
-  jwtError,
+const core = {
+  sign: { signAuth, signCookieAuth, signJwtAuth },
+  middlewares: {
+    middlewareProtect,
+    middlewareValidateAuthorization,
+    useProtect,
+  },
+  errors: { jwtError },
 };
+
+export default core;
