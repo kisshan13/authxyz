@@ -1,5 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 
+export interface GoogleAuthOptions {
+  auth: "JWT" | "COOKIE";
+}
+
 export type PostProcessType =
   | "ALREADY-USER"
   | "NEW-USER"
@@ -22,7 +26,7 @@ export interface AuthUrlConfig<T> extends AuthConfig<T> {
 }
 
 export type Body<T extends Object> = {
-  type: PostProcessType;
+  type?: PostProcessType;
   message?: string;
   data?: T;
 };
@@ -40,3 +44,24 @@ export type LocalMiddlewareRegister = (
 ) => Promise<any> | any;
 
 export type GoogleScopes = "email" | "openid" | "profile";
+export interface AdapterMethodResult {
+  status: number;
+  message: string;
+  data: any;
+}
+
+export type DatabaseAdapter = {
+  addUser: (data: any) => Promise<AdapterMethodResult>;
+  getUser: (data: any) => Promise<AdapterMethodResult>;
+  updateUser: (data: {
+    id: string;
+    update: Object;
+  }) => Promise<AdapterMethodResult>;
+
+  handlers: ErrorHandler[];
+};
+
+export type ErrorHandler = (error: Error) => {
+  message: string;
+  status: number;
+};

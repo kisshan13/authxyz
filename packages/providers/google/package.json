@@ -35,9 +35,11 @@
     "authorization"
   ],
   "dependencies": {
+    "@authxyz/core": "^1.0.3",
     "express": "^4.18.3",
     "google-auth-library": "^9.7.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "moment": "^2.30.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
