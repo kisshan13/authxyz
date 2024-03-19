@@ -4,6 +4,7 @@ import {
   middlewareValidateAuthorization,
   useProtect,
 } from "./middleware.js";
+import { errorFormatter, jwtError } from "./errors.js";
 
 export default {
   signAuth,
@@ -12,4 +13,6 @@ export default {
   middlewareProtect,
   middlewareValidateAuthorization,
   useProtect,
+  errorFormatter,
+  jwtError,
 };
