@@ -54,4 +54,4 @@ app.listen(3000, () => {
 });
 ```
 
-You can this example on [Github]("https://github.com/kisshan13/authxyz/tree/main/packages/providers/google/examples")
+You can this example on [Github]("https://github.com/kisshan13/authxyz/tree/main/packages/providers/discord/examples")
