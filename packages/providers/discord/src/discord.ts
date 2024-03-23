@@ -166,7 +166,7 @@ export default class Discord<T extends string> {
             headers: {
               authorization: `${oauthData.token_type} ${oauthData.access_token}`,
             },
-          });
+          }); 
 
           const user = (await info.json()) as DiscordUserInfo;
 
@@ -192,9 +192,15 @@ export default class Discord<T extends string> {
           }
 
           const newUser = await this.#adapter.addUser({
-            ...user,
+            name: user.username,
+            email: user.email,
+            profileImage: user.avatar,
             password: "random",
             role: decoded?.role,
+            provider: "discord",
+            auth: {
+              access_token: oauthData?.access_token,
+            }
           });
 
           const token = signAuth({

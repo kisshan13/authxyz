@@ -27,6 +27,12 @@ export function registerUserSchema(
       default: false,
     },
 
+    auth: {
+      access_token: String,
+      expires_in: Number,
+      scope: String
+    },
+
     ...(typeof options?.schema === "object" ? { ...options.schema } : {}),
   });
 

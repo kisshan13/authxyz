@@ -4,7 +4,7 @@ import {
   middlewareValidateAuthorization,
   useProtect,
 } from "./middleware.js";
-import { errorFormatter, jwtError } from "./errors.js";
+import {  jwtError } from "./errors.js";
 
 const core = {
   sign: { signAuth, signCookieAuth, signJwtAuth },
