@@ -164,9 +164,17 @@ export default class Google<T extends string> {
           }
 
           const newUser = await this.#adapter.addUser({
-            ...payload,
+            name: payload?.given_name,
+            email: payload?.email,
+            profileImage: payload?.picture,
+            role: decoded?.role,
             provider: "google",
-            credentials: { ...tokens },
+            auth: { 
+              access_token: tokens.access_token,
+              refresh_token: tokens.refresh_token,
+              scope: tokens.scope,
+              expires_in: tokens.expiry_date
+             },
           });
 
           if (newUser.status === 200) {
