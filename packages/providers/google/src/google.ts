@@ -169,12 +169,12 @@ export default class Google<T extends string> {
             profileImage: payload?.picture,
             role: decoded?.role,
             provider: "google",
-            auth: { 
+            auth: {
               access_token: tokens.access_token,
               refresh_token: tokens.refresh_token,
               scope: tokens.scope,
-              expires_in: tokens.expiry_date
-             },
+              expires_in: tokens.expiry_date,
+            },
           });
 
           if (newUser.status === 200) {
@@ -210,95 +210,3 @@ export default class Google<T extends string> {
     };
   }
 }
-
-// export default class Google<T extends string> {
-//   #client: OAuth2Client;
-//   constructor({ ...options }: ThirdPartyInitailization<T>) {
-//     super(options);
-//     this.#client = new OAuth2Client({
-//       clientId: options?.clientId,
-//       clientSecret: options?.clientSecret,
-//       redirectUri: options?.redirectUri,
-//     });
-//   }
-
-//   auth(
-//     config: AuthUrlConfig<T>,
-//     callback: PostprocessRequest<{ url: string; state: string }>
-//   ): LocalMiddlewareRegister {
-//     const isCallback = isFunction(callback);
-//     const { stateSecret } = this.getPrivateFields();
-
-//     return async (req, res, next) => {
-//       if (req.path === config.path && req.method === "GET") {
-//         const state = jwt.sign({ role: config.role }, stateSecret);
-//         const url = this.#client.generateAuthUrl({
-//           access_type: "offline",
-//           scope: config.scope || ["email", "openid", "profile"],
-//           state,
-//         });
-
-//         if (config.redirect) {
-//           return res.redirect(url);
-//         }
-
-//         return isCallback
-//           ? callback({ type: "AUTH-URL", data: { url, state } }, req, res)
-//           : res.status(200).json({ url, state });
-//       } else {
-//         next();
-//       }
-//     };
-//   }
-
-//   callback(
-//     config: AuthUrlConfig<T>,
-//     callback?: PostprocessRequest<{ user: Object }>
-//   ): LocalMiddlewareRegister {
-//     const isCallback = isFunction(callback);
-//     const { stateSecret, roles, clientId } = this.getPrivateFields();
-
-//     return async (req, res, next) => {
-//       if (req.path === config.path && req.method === "GET") {
-//         const { code, state } = req.query;
-
-//         if (!code || !state) {
-//           return isCallback
-//             ? callback({ type: "INVALID-CODE" }, req, res)
-//             : res.status(400).json({ message: "Invalid code" });
-//         }
-
-//         const decoded = jwt.verify(state as string, stateSecret) as { role: T };
-
-//         if (roles.includes(decoded.role)) {
-//           const { tokens } = await Promise.resolve(
-//             this.#client.getToken(code as string)
-//           );
-
-//           const ticket = await this.#client.verifyIdToken({
-//             idToken: tokens.id_token!,
-//             audience: clientId,
-//           });
-
-//           const payload = ticket.getPayload();
-
-//           if (payload) {
-//             return isCallback
-//               ? callback(
-//                   { type: "NEW-USER", data: { user: payload } },
-//                   req,
-//                   res
-//                 )
-//               : res.status(200).json({ user: payload });
-//           }
-//         }
-
-//         return isCallback
-//           ? callback({ type: "INVALID-CODE" }, req, res)
-//           : res.status(400).json({ message: "Invalid code" });
-//       } else {
-//         next();
-//       }
-//     };
-//   }
-// }

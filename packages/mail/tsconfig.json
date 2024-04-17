@@ -12,6 +12,6 @@
     "esModuleInterop": true,
     "moduleResolution": "node",
     "preserveConstEnums": true,
-    "allowJs": true
+    "allowJs": true,
   }
 }

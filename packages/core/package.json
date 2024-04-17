@@ -1,7 +1,7 @@
 {
   "name": "@authxyz/core",
   "description": "Authxyz core package for authentication implementations and providers.",
-  "version": "1.0.3",
+  "version": "1.0.7",
   "license": "MIT",
   "main": "dist/index.js",
   "type": "module",

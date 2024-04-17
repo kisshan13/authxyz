@@ -1,9 +1,10 @@
 {
   "name": "@authxyz/mail",
   "description": "Mail config for authxyz provider.",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "license": "MIT",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "homepage": "http://github.com/kisshan13/authentic.js#readme",
   "bugs": "http://github.com/kisshan13/authentic.js/issues",

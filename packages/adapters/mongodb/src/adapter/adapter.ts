@@ -52,11 +52,7 @@ class MongoAdapter<T extends Document> {
 
     delete newUser["password"];
 
-    return {
-      status: 201,
-      message: "User Details are: ",
-      data: newUser.toJSON(),
-    };
+    return newUser.toJSON();
   }
 
   async getUser(user: GetUser | Object) {
@@ -65,17 +61,13 @@ class MongoAdapter<T extends Document> {
       ...(user["id"] && { _id: user["id"] }),
     };
 
-    const foundUser = await this.#user.findOne(userFilter);
+    const foundUser = await this.#user.findOne(userFilter).lean();
 
     if (!foundUser) {
       return null;
     }
 
-    return {
-      status: 200,
-      message: "User Details are: ",
-      data: foundUser.toJSON(),
-    };
+    return foundUser;
   }
 
   async updateUser(user: UpdateUser) {
@@ -87,11 +79,7 @@ class MongoAdapter<T extends Document> {
       return null;
     }
 
-    return {
-      status: 200,
-      message: "User Details are: ",
-      data: updatedUser,
-    };
+    return updatedUser;
   }
 }
 

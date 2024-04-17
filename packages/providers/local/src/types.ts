@@ -46,8 +46,8 @@ export interface AdapterMethodResult {
 }
 
 export type DatabaseAdapter = {
-  addUser: (data: any) => Promise<AdapterMethodResult>;
-  getUser: (data: any) => Promise<AdapterMethodResult>;
+  addUser: (data: any) => any;
+  getUser: (data: any) => any;
   updateUser: (data: {
     id: string;
     update: Object;

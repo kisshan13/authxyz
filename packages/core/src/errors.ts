@@ -1,4 +1,6 @@
-import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
+
+const { JsonWebTokenError, TokenExpiredError } = jwt;
 
 export type ErrorHandler = (error: Error) => {
   message: string;

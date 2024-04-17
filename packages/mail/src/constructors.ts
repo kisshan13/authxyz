@@ -1,10 +1,12 @@
-type MailType =
+export type MailType =
   | "onRegister"
   | "onLogin"
   | "onForgotPassword"
-  | "onPasswordChange";
+  | "onPasswordChange"
+  | "onVerificationSuccess"
+  | "onVerificationResend";
 
-interface MailSendConfig {
+export interface MailSendConfig {
   to: string;
   subject: string;
   body: string;
@@ -12,11 +14,11 @@ interface MailSendConfig {
 }
 
 class MailResponder {
-  #type: MailType;
-  #config: MailSendConfig;
+  type: MailType;
+  config: MailSendConfig;
   constructor(type: MailType, options: MailSendConfig) {
-    this.#type = type;
-    this.#config = options;
+    this.type = type;
+    this.config = options;
   }
 }
 

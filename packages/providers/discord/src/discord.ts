@@ -166,7 +166,7 @@ export default class Discord<T extends string> {
             headers: {
               authorization: `${oauthData.token_type} ${oauthData.access_token}`,
             },
-          }); 
+          });
 
           const user = (await info.json()) as DiscordUserInfo;
 
@@ -200,7 +200,10 @@ export default class Discord<T extends string> {
             provider: "discord",
             auth: {
               access_token: oauthData?.access_token,
-            }
+              expires_in: oauthData?.expires_in,
+              scope: oauthData?.scope,
+              token_type: oauthData?.token_type,
+            },
           });
 
           const token = signAuth({

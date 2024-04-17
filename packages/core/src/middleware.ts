@@ -27,12 +27,9 @@ export interface AdapterMethodResult {
 }
 
 type DatabaseAdapter = {
-  addUser: (data: any) => Promise<AdapterMethodResult>;
-  getUser: (data: any) => Promise<AdapterMethodResult>;
-  updateUser: (data: {
-    id: string;
-    update: Object;
-  }) => Promise<AdapterMethodResult>;
+  addUser: (data: any) => Promise<any>;
+  getUser: (data: any) => Promise<any>;
+  updateUser: (data: { id: string; update: Object }) => Promise<any>;
 
   handlers: ErrorHandler[];
 };
@@ -62,10 +59,14 @@ function middlewareProtect(
   return async (req: Request, res: Response, next: NextFunction) => {
     const isAuthenticated = await useAuthorization(req, res, next);
 
+    console.log(isAuthenticated);
+
     if (isAuthenticated.status !== "error" && isAuthenticated.status) {
       const user = await adapter.getUser({ id: isAuthenticated.data.id });
 
-      if (roles.includes(user?.data?.role)) {
+      console.log(user);
+
+      if (roles.includes(user?.role)) {
         return {
           data: null,
           status: true,

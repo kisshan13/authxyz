@@ -17,20 +17,21 @@ export function registerUserSchema(
       type: String,
       required: true,
     },
-
+    profileImage: String,
     role: {
       type: String,
     },
-
     isVerified: {
       type: Boolean,
       default: false,
     },
-
+    provider: String,
     auth: {
       access_token: String,
       expires_in: Number,
-      scope: String
+      scope: String,
+      token_type: String,
+      refresh_token: String,
     },
 
     ...(typeof options?.schema === "object" ? { ...options.schema } : {}),
