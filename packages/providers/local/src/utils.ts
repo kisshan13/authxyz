@@ -28,6 +28,18 @@ export function jwtError(error: Error) {
   }
 }
 
+export function duplicateDocHandler(error: Error) {
+  if (error instanceof Error) {
+    if (error.message.includes("E11000 duplicate key error")) {
+      const alreadyExists = Object.keys(error["keyValue"]);
+      return {
+        status: 400,
+        message: `${alreadyExists.join()} already exists`,
+      };
+    }
+  }
+}
+
 type Controller = (
   req: Request,
   res: Response,
@@ -43,8 +55,7 @@ interface RequestProcessors<T extends object> {
 export function asyncHandler(controller: Controller) {
   return async (req: Request, res: Response, next: NextFunction) => {
     return Promise.resolve(controller(req, res, next)).catch((err) => {
-      console.log(err);
-      let handlers = [jwtError, zodError];
+      let handlers = [jwtError, zodError, duplicateDocHandler];
 
       for (const handler of handlers) {
         const error = handler(err);
