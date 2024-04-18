@@ -9,7 +9,7 @@ const app = express();
 
 app.use(express.json());
 
-const database = mongoose.createConnection("<>")
+const database = mongoose.createConnection("<your-database-url>")
 
 const adapter = new MongoAdapter({
     database: database
