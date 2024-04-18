@@ -19,7 +19,7 @@ export function errorFormatter(err: Error, handlers: ErrorHandler[]) {
     }
   }
 
-  return response;
+  return response || { message: "Internal server error", status: 500 };
 }
 
 export function jwtError(error: Error) {

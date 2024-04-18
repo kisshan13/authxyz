@@ -2,6 +2,7 @@ import type { Response, Request, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 import { cookieName } from "./sign.js";
+import { errorFormatter, jwtError } from "./errors.js";
 
 type ErrorHandler = (error: Error) => {
   message: string;
@@ -59,12 +60,8 @@ function middlewareProtect(
   return async (req: Request, res: Response, next: NextFunction) => {
     const isAuthenticated = await useAuthorization(req, res, next);
 
-    console.log(isAuthenticated);
-
     if (isAuthenticated.status !== "error" && isAuthenticated.status) {
       const user = await adapter.getUser({ id: isAuthenticated.data.id });
-
-      console.log(user);
 
       if (roles.includes(user?.role)) {
         return {
@@ -150,10 +147,16 @@ function useProtect<T extends string>(
   );
 
   return async (req, res, next) => {
-    const isAuthenticated = await useProtected(req, res, next);
+    try {
+      const isAuthenticated = await useProtected(req, res, next);
 
-    if (isAuthenticated.status) {
-      next();
+      if (isAuthenticated.status) {
+        next();
+      }
+    } catch (error) {
+      const response = errorFormatter(error, [jwtError]);
+
+      res.status(response.status).json(response);
     }
   };
 }
