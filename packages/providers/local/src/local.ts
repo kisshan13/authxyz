@@ -97,7 +97,7 @@ class Local<T extends string> {
     }: HandlerOptions<T, { token: string; email: string; id: string }>
   ) {
     const handler = asyncHandler(async (req, res, next) => {
-      if (req.path === path) {
+      if (req.path === path && req.method === "POST") {
         const payload = body ? body(req.body) : registerSchema.parse(req.body);
 
         const passwordHash = bcrypt.hashSync(
@@ -155,7 +155,7 @@ class Local<T extends string> {
     { role, body, pre, post }: HandlerOptions<T, { user: Object }>
   ) {
     const handler = asyncHandler(async (req, res, next) => {
-      if (req.path === path) {
+      if (req.path === path && req.method === "POST") {
         const payload = body ? body(req.body) : registerSchema.parse(req.body);
 
         const user = await this.#adapter.getUser({ email: payload["email"] });
@@ -217,7 +217,7 @@ class Local<T extends string> {
     { body, role, post, pre }: HandlerOptions<T, { user: Object }>
   ) {
     const handler = asyncHandler(async (req, res, next) => {
-      if (req.path === path) {
+      if (req.path === path && req.method === "POST") {
         const payload = body
           ? body(req.body)
           : verificationSchema.parse(req.body);
@@ -281,28 +281,32 @@ class Local<T extends string> {
     });
 
     const handler = asyncHandler(async (req, res, next) => {
-      const isAuthenticated = await useAuthenticated(req, res);
+      if (req.path === path && req.method === "GET") {
+        const isAuthenticated = await useAuthenticated(req, res);
 
-      if (!isAuthenticated.status) {
+        if (!isAuthenticated.status) {
+          return {
+            context: null,
+            resolveMainHandler: () =>
+              res.status(401).json({ error: "Unauthorized" }),
+          };
+        }
+
+        const user = await this.#adapter.getUser({
+          id: isAuthenticated.data.id,
+        });
+        const verificationCode = Math.ceil(Math.random() * 1000000);
+
+        this.sendMail("onVerificationResend", {
+          user,
+          verificationCode: verificationCode,
+        });
+
         return {
-          context: null,
-          resolveMainHandler: () =>
-            res.status(401).json({ error: "Unauthorized" }),
+          context: { user, verificationCode },
+          resolveMainHandler: () => res.status(200).json({ verificationCode }),
         };
       }
-
-      const user = await this.#adapter.getUser({ id: isAuthenticated.data.id });
-      const verificationCode = Math.ceil(Math.random() * 1000000);
-
-      this.sendMail("onVerificationResend", {
-        user,
-        verificationCode: verificationCode,
-      });
-
-      return {
-        context: { user, verificationCode },
-        resolveMainHandler: () => res.status(200).json({ verificationCode }),
-      };
     });
 
     return withRequestProcessors(path, {
@@ -322,7 +326,7 @@ class Local<T extends string> {
     }: HandlerOptions<T, { user: Object; resetCode: number }>
   ) {
     const handler = asyncHandler(async (req, res, next) => {
-      if (req.path === path) {
+      if (req.path === path && req.method === "POST") {
         const payload = body
           ? body(req.body)
           : forgotPasswordSchema.parse(req.body);
@@ -371,7 +375,7 @@ class Local<T extends string> {
     }: HandlerOptions<T, { email: string; user: Object }>
   ) {
     const handler = asyncHandler(async (req, res, next) => {
-      if (req.path === path) {
+      if (req.path === path && req.method === "POST") {
         const payload = body
           ? body(req.body)
           : resetPasswordSchema.parse(req.body);

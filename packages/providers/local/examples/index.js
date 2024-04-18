@@ -2,14 +2,14 @@ import express from "express";
 import mongoose from "mongoose";
 import { createTransport } from "nodemailer";
 
+import LocalAuth from "../dist/index.js";
 import MongoAdapter from "@authxyz/adapter-mongodb"
-import LocalAuth from "../dist/index.js"
 
 const app = express();
 
 app.use(express.json());
 
-const database = mongoose.createConnection("mongodb+srv://ks492013:ks492013@cluster0.jutd3d1.mongodb.net/authxyz-local?retryWrites=true&w=majority&appName=Cluster0")
+const database = mongoose.createConnection("<>")
 
 const adapter = new MongoAdapter({
     database: database
@@ -32,8 +32,8 @@ const mail = createTransport({
     port: 465,
     secure: true,
     auth: {
-        user: "gamekidzesport@gmail.com",
-        pass: "jvjx xwsq orbe krhh"
+        user: "<your-mail-client>",
+        pass: "<your-mail-password>"
     }
 });
 
