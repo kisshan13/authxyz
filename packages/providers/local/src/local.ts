@@ -13,6 +13,7 @@ import MailResponder, { MailType } from "@authxyz/mail";
 import NodeCache from "node-cache";
 
 import { forgotPasswordSchema, verificationSchema } from "./validation.js";
+import { NoSecretTokenError } from "./errors.js";
 
 interface AuthType {
   type: "JWT" | "COOKIE";
@@ -70,6 +71,12 @@ class Local<T extends string> {
   #resetCodes: NodeCache;
   #mailClient: Transporter<SMTPTransport.SentMessageInfo>;
   constructor({ roles, adapter, auth, mailClient }: LocalAuthOption<T>) {
+    if (!auth.secret) {
+      throw new NoSecretTokenError(
+        "Please provide a secret token for JWT or Cookie authentication."
+      );
+    }
+
     this.#roles = roles;
     this.#adapter = adapter;
     this.#auth = auth;
@@ -191,8 +198,6 @@ class Local<T extends string> {
             cookieOptions: this.#auth.options as CookieOptions,
           },
         });
-
-        console.log("Token :", token);
 
         this.sendMail("onLogin", { user, verificationCode: 0 });
 
@@ -460,8 +465,6 @@ class Local<T extends string> {
         this.#resetCodes.set(user["email"], verificationCode);
       }
 
-      console.log(info);
-
       const hello = await this.#mailClient.sendMail({
         to: info.config.to,
         subject: info.config.subject,
@@ -469,8 +472,6 @@ class Local<T extends string> {
           ? { html: info.config.body }
           : { text: info.config.body }),
       });
-
-      console.log(hello);
     }
   }
 

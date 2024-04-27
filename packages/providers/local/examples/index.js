@@ -9,7 +9,7 @@ const app = express();
 
 app.use(express.json());
 
-const database = mongoose.createConnection("<your-database-url>")
+const database = mongoose.createConnection("mongodb+srv://ks492013:ks492013@cluster0.jutd3d1.mongodb.net/authxyz-local-test?retryWrites=true&w=majority&appName=Cluster0")
 
 const adapter = new MongoAdapter({
     database: database
@@ -40,7 +40,7 @@ const mail = createTransport({
 localAuth.mailConfig(mail);
 
 app.use(localAuth.login("/login", { role: "user" }));
-app.use(localAuth.register("/register", { role: "user" }));
+app.use(localAuth.register("/api/register", { role: "user" }));
 app.use(localAuth.forgotPassword("/forgot-password", { role: "user" }));
 app.use(localAuth.resetPassword("/reset-password", { role: "user" }))
 

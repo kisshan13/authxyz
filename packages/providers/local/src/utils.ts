@@ -84,11 +84,12 @@ export function withRequestProcessors<T extends Object>(
       }
 
       const context = await main(req, res, next);
-
       if (post && context?.context) {
         post(context?.context as T, req, res);
       } else {
-        context?.resolveMainHandler();
+        if (context?.resolveMainHandler) {
+          context?.resolveMainHandler();
+        }
       }
     } else {
       next();

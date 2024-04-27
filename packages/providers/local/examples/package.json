@@ -19,7 +19,7 @@
   "homepage": "https://github.com/kisshan13/authxyz#readme",
   "dependencies": {
     "@authxyz/adapter-mongodb": "^1.0.1",
-    "@authxyz/local": "^1.0.6",
+    "@authxyz/local": "^2.0.2",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.3.0",
